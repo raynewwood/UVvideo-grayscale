@@ -15,6 +15,7 @@ https://blog.csdn.net/weixin_39644614/article/details/113313084
 算法比较 外接不同图像、计算轮廓周长和长度
 https://www.cnblogs.com/little-monkey/p/7469354.html
 https://blog.csdn.net/yukinoai/article/details/87892718
+
 主要思路为：
 
 将紫外放电视频转换为针对放电点的灰度值图像，并据此对放电性质进行诊断
