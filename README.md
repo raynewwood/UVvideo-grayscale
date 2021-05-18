@@ -16,6 +16,16 @@ https://blog.csdn.net/weixin_39644614/article/details/113313084
 https://www.cnblogs.com/little-monkey/p/7469354.html
 https://blog.csdn.net/yukinoai/article/details/87892718
 
+
+判断一个点是否在任意矩形之内
+
+1、求4个角点的坐标
+
+https://blog.csdn.net/Maisie_Nan/article/details/105833892  
+2、判断
+
+https://blog.csdn.net/taihuoxi6983/article/details/108615695
+
 主要思路为：
 
 将紫外放电视频转换为针对放电点的灰度值图像，并据此对放电性质进行诊断
