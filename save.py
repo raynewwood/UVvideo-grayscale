@@ -4,6 +4,8 @@ import math
 
 font = cv2.FONT_HERSHEY_SIMPLEX  # 设置字体样式
 cap = cv2.VideoCapture('c01.avi')
+d = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+print(d)
 
 # Define the codec and create VideoWriter object
 
@@ -11,12 +13,12 @@ size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
         int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
 out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, size,1)
-nihe =
+nihe =4
 #1 圆拟合
 #2 直边界矩形
 #3 最小矩形
 #4 椭圆
-data=np.zeros([size[0],size[1]],np.uint8)#建立一张像素矩阵表，对光斑在矩阵像素的位置加和
+
 # 计算(x1,y1)(x,y)、(x2,y2)(x,y)向量的叉乘
 def GetCross(x1,y1,x2,y2,x,y):
     a=(x2-x1,y2-y1)
@@ -26,12 +28,17 @@ def GetCross(x1,y1,x2,y2,x,y):
 # 判断(x,y)是否在矩形内部
 def isInSide(x1,y1,x2,y2,x3,y3,x4,y4,x,y):
     return GetCross(x1,y1,x2,y2,x,y)*GetCross(x3,y3,x4,y4,x,y)>=0 and GetCross(x2,y2,x3,y3,x,y)*GetCross(x4,y4,x1,y1,x,y)>=0
-
+f=0
+count=1
+data_A = np.zeros([448, 448], np.uint8)
 while(cap.isOpened()):
+    f = f + 1
     ret, frame = cap.read()
     if nihe ==1: #圆拟合
+        #data = np.zeros([size[0], size[1]],np.uint8)  # 建立一张像素矩阵表，对光斑在矩阵像素的位置加和
+        #for f in range(d):
+
         if ret==True:
-            #frame = cv2.flip(frame,0)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#灰度化
             ret, thresh = cv2.threshold(gray, 230, 255, 0)  # 二值化
             kernel = np.ones((5, 5), np.uint8)
@@ -49,19 +56,21 @@ while(cap.isOpened()):
                 text2 = 'Diameter: ' + str(2 * radius)
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
-                        if math.pow((i-int(x)),2)+math.pow((j-int(y)),2)<math.pow(int(radius),2):#判断该像素点是否在圆内
-                            data[i][j]+=1#若在圆内，则对该像素点进行累加
-                        else:
-                            break
-                #print('data=',data)
+                        if (i-x)*(i-x)+(j-y)*(j-y)<radius*radius:#判断该像素点是否在圆内
+                            count+=1
+                            data_A[i][j]+=1#若在圆内，则将该像素点置1
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text2, (10, 60), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 out.write(frame)
                 cv2.imshow('frame',frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                # 若没有按下q键，则每1毫秒显示一帧
+                if cv2.waitKey(25) & 0xFF == ord('q'):
                     break
         else:
             break
+
+
+
     elif nihe ==2:#2 直边界矩形
         if ret==True:
             #frame = cv2.flip(frame,0)
@@ -73,6 +82,7 @@ while(cap.isOpened()):
             contours, hierarchy = cv2.findContours(closing, 3, 1)#轮廓检测
             for c in range(len(contours)):
                 x, y, w, h = cv2.boundingRect(contours[c])
+
                 area = cv2.contourArea(contours[c])
                 aspect_ratio = float(w) / h  # 长宽比
                 rect_area = w * h
@@ -86,11 +96,15 @@ while(cap.isOpened()):
                 text3 = 'Solidity: ' + str(round(solidity, 4))
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
-                        if i>=x and i<=x+w and j>=y and j<=y+h:#如果像素点在方框内
-                            data[i][j]+=1#若在圆内，则对该像素点进行累加
+                        if (i>=x) and (i<=x+w):
+                            if  (j>=y) and(j<=y+h):#如果像素点在方框内
+                                count+=1
+                                data_A[i][j]+=1#若在矩形内，则对该像素点进行累加
+                            else:
+                                continue
                         else:
                             break
-                #print('data=',data)
+                print('count=',count)
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text2, (10, 60), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text3, (10, 90), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
@@ -133,7 +147,7 @@ while(cap.isOpened()):
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
                         if isInSide(l_x,l_y,r_x,r_y,t_x,t_y,b_x,b_y,i,j):#如果像素点在矩形内
-                            data[i][j]+=1#若在圆内，则对该像素点进行累加
+                            data_A[i][j]+=1#若在圆内，则对该像素点进行累加
                         else:
                             break
                 #print('data=',data)
@@ -145,6 +159,7 @@ while(cap.isOpened()):
                     break
         else:
             break
+
     elif nihe ==4:#4 椭圆
         if ret==True:
             #frame = cv2.flip(frame,0)
@@ -161,7 +176,7 @@ while(cap.isOpened()):
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
                         if math.pow((i-cx),2)/(a*a)+math.pow((j-cy),2)/(b*b)<=1:#如果像素点在方框内
-                            data[i][j]+=1#若在圆内，则对该像素点进行累加
+                            data_A[i][j]+=1#若在圆内，则对该像素点进行累加
                         else:
                             break
                 frame = cv2.drawContours(frame, contours, -1, (0, 0, 255), 1)#在原图中画轮廓
@@ -175,10 +190,8 @@ while(cap.isOpened()):
                     break
         else:
             break
-
-
-
-# Release everything if job is finished
+    else:
+        break
 cap.release()
 out.release()
 cv2.destroyAllWindows()
