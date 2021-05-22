@@ -4,14 +4,9 @@ import math
 
 font = cv2.FONT_HERSHEY_SIMPLEX  # 设置字体样式
 cap = cv2.VideoCapture('c01.avi')
-d = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-print(d)
-
 # Define the codec and create VideoWriter object
-
 size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
         int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-
 out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, size,1)
 nihe =4
 #1 圆拟合
@@ -32,12 +27,8 @@ f=0
 count=1
 data_A = np.zeros([448, 448], np.uint8)
 while(cap.isOpened()):
-    f = f + 1
     ret, frame = cap.read()
     if nihe ==1: #圆拟合
-        #data = np.zeros([size[0], size[1]],np.uint8)  # 建立一张像素矩阵表，对光斑在矩阵像素的位置加和
-        #for f in range(d):
-
         if ret==True:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#灰度化
             ret, thresh = cv2.threshold(gray, 230, 255, 0)  # 二值化
@@ -57,7 +48,6 @@ while(cap.isOpened()):
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
                         if (i-x)*(i-x)+(j-y)*(j-y)<radius*radius:#判断该像素点是否在圆内
-                            count+=1
                             data_A[i][j]+=1#若在圆内，则将该像素点置1
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text2, (10, 60), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
@@ -82,7 +72,6 @@ while(cap.isOpened()):
             contours, hierarchy = cv2.findContours(closing, 3, 1)#轮廓检测
             for c in range(len(contours)):
                 x, y, w, h = cv2.boundingRect(contours[c])
-
                 area = cv2.contourArea(contours[c])
                 aspect_ratio = float(w) / h  # 长宽比
                 rect_area = w * h
@@ -98,13 +87,8 @@ while(cap.isOpened()):
                     for j in range(0,size[1]):
                         if (i>=x) and (i<=x+w):
                             if  (j>=y) and(j<=y+h):#如果像素点在方框内
-                                count+=1
                                 data_A[i][j]+=1#若在矩形内，则对该像素点进行累加
-                            else:
-                                continue
-                        else:
-                            break
-                print('count=',count)
+
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text2, (10, 60), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text3, (10, 90), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
@@ -114,6 +98,7 @@ while(cap.isOpened()):
                     break
         else:
             break
+            
     elif nihe ==3:#3 最小矩形
         if ret==True:
             #frame = cv2.flip(frame,0)
@@ -148,8 +133,7 @@ while(cap.isOpened()):
                     for j in range(0,size[1]):
                         if isInSide(l_x,l_y,r_x,r_y,t_x,t_y,b_x,b_y,i,j):#如果像素点在矩形内
                             data_A[i][j]+=1#若在圆内，则对该像素点进行累加
-                        else:
-                            break
+
                 #print('data=',data)
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text2, (10, 60), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
@@ -169,16 +153,28 @@ while(cap.isOpened()):
             opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)#开运算
             closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)#闭运算
             contours, hierarchy = cv2.findContours(closing, 3, 1)#轮廓检测
+
             for c in range(len(contours)):
-                (cx,cy),(a,b),angle = cv2.fitEllipse(contours[c])
+                (cx,cy),(a,b),angle = cv2.fitEllipse(contours[c])#（x, y）代表椭圆中心点的位置
+                                                                 #（a, b）代表长短轴长度，应注意a、b为长短轴的直径，而非半径
+                                                                 # #angle 代表了中心旋转的角度
+                th = 2 * math.pi * angle / 360
+                cos = math.cos(th)
+                sin = math.sin(th)
+                if a>=b:#判断长轴在x上还是Y上，若a>=b 则在x轴上，反之在y轴上
+                    change=0
+                else:
+                    change=1
+                print(change)
                 cv2.ellipse(frame,(np.int32(cx),np.int32(cy)),
                             (np.int32(a/2), np.int32(b/2)), angle, 0, 360, (0, 0, 255), 2, 8, 0)
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
-                        if math.pow((i-cx),2)/(a*a)+math.pow((j-cy),2)/(b*b)<=1:#如果像素点在方框内
+                        if change ==0 and math.pow((i*cos+j*sin-cx),2)/(a*a)+math.pow((-i*sin+j*cos-cy),2)/(b*b)<=0.25:#长轴为x轴，且像素点在方框内
                             data_A[i][j]+=1#若在圆内，则对该像素点进行累加
-                        else:
-                            break
+                        elif change ==1 and math.pow((i*cos+j*sin-cx),2)/(b*b)+math.pow((-i*sin+j*cos-cy),2)/(a*a)<=0.25:#长轴为y轴，且像素点在方框内
+                            data_A[i][j]+=1
+
                 frame = cv2.drawContours(frame, contours, -1, (0, 0, 255), 1)#在原图中画轮廓
             #第一个参数是指明在哪幅图像上绘制轮廓；
             #第二个参数是轮廓本身，在Python中是一个list。
