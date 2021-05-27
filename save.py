@@ -7,7 +7,7 @@ cap = cv2.VideoCapture('c01.avi')
 # Define the codec and create VideoWriter object
 size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
         int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, size,1)
+out = cv2.VideoWriter('output_92.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, size,1)
 nihe =4
 #1 圆拟合
 #2 直边界矩形
@@ -25,7 +25,9 @@ def isInSide(x1,y1,x2,y2,x3,y3,x4,y4,x,y):
     return GetCross(x1,y1,x2,y2,x,y)*GetCross(x3,y3,x4,y4,x,y)>=0 and GetCross(x2,y2,x3,y3,x,y)*GetCross(x4,y4,x1,y1,x,y)>=0
 f=0
 count=1
-data_A = np.zeros([448, 448], np.uint8)
+size_w=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+size_h=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+data_A = np.zeros([size_w, size_h], np.uint8)
 while(cap.isOpened()):
     ret, frame = cap.read()
     if nihe ==1: #圆拟合
@@ -45,19 +47,21 @@ while(cap.isOpened()):
                 cv2.circle(frame, center, radius, (0, 255, 0), 2)
                 text1 = 'Center: (' + str(int(x)) + ', ' + str(int(y)) + ') '
                 text2 = 'Diameter: ' + str(2 * radius)
-                for i in range(0,size[0]):
-                    for j in range(0,size[1]):
+                for i in range(0,size_w):
+                    for j in range(0,size_h):
                         if (i-x)*(i-x)+(j-y)*(j-y)<radius*radius:#判断该像素点是否在圆内
                             data_A[i][j]+=1#若在圆内，则将该像素点置1
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text2, (10, 60), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 out.write(frame)
-                cv2.imshow('frame',frame)
+                #cv2.imshow('frame',frame)
                 # 若没有按下q键，则每1毫秒显示一帧
                 if cv2.waitKey(25) & 0xFF == ord('q'):
                     break
+
         else:
             break
+
 
 
 
@@ -98,7 +102,7 @@ while(cap.isOpened()):
                     break
         else:
             break
-            
+
     elif nihe ==3:#3 最小矩形
         if ret==True:
             #frame = cv2.flip(frame,0)
@@ -188,6 +192,8 @@ while(cap.isOpened()):
             break
     else:
         break
+cv2.imshow('grayimage', data_A)
+cv2.imwrite('4.jpg', data_A)
 cap.release()
 out.release()
 cv2.destroyAllWindows()
