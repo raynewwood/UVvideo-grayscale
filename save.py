@@ -14,7 +14,7 @@ nihe =4
 #3 最小矩形
 #4 椭圆
 
-# 计算(x1,y1)(x,y)、(x2,y2)(x,y)向量的叉乘
+'''# 计算(x1,y1)(x,y)、(x2,y2)(x,y)向量的叉乘
 def GetCross(x1,y1,x2,y2,x,y):
     a=(x2-x1,y2-y1)
     b=(x-x1,y-y1)
@@ -22,7 +22,7 @@ def GetCross(x1,y1,x2,y2,x,y):
 
 # 判断(x,y)是否在矩形内部
 def isInSide(x1,y1,x2,y2,x3,y3,x4,y4,x,y):
-    return GetCross(x1,y1,x2,y2,x,y)*GetCross(x3,y3,x4,y4,x,y)>=0 and GetCross(x2,y2,x3,y3,x,y)*GetCross(x4,y4,x1,y1,x,y)>=0
+    return GetCross(x1,y1,x2,y2,x,y)*GetCross(x3,y3,x4,y4,x,y)>=0 and GetCross(x2,y2,x3,y3,x,y)*GetCross(x4,y4,x1,y1,x,y)>=0'''
 f=0
 count=1
 size_w=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -54,7 +54,7 @@ while(cap.isOpened()):
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 cv2.putText(frame, text2, (10, 60), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
                 out.write(frame)
-                #cv2.imshow('frame',frame)
+                cv2.imshow('frame',frame)
                 # 若没有按下q键，则每1毫秒显示一帧
                 if cv2.waitKey(25) & 0xFF == ord('q'):
                     break
@@ -126,6 +126,13 @@ while(cap.isOpened()):
                 r_y = box[:, 1][np.where(box[:, 0] == r_x)][0]
                 t_x = box[:, 0][np.where(box[:, 1] == t_y)][0]
                 b_x = box[:, 0][np.where(box[:, 1] == b_y)][0]
+                th = 2 * math.pi * rect[2] / 360
+                cos = math.cos(th)
+                sin = math.sin(th)
+                minx=int(l_x*cos+l_y*sin)
+                maxx=int(r_x*cos+r_y*sin)
+                miny=int(-b_x*sin+b_y*cos)
+                maxy=int(-t_x*sin+t_y*cos)
 
                 area = cv2.contourArea(box)
                 width = rect[1][0]
@@ -135,8 +142,12 @@ while(cap.isOpened()):
                 text2 = 'Rect Area: ' + str(area)
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
-                        if isInSide(l_x,l_y,r_x,r_y,t_x,t_y,b_x,b_y,i,j):#如果像素点在矩形内
+                        x=int(i*cos+j*sin)
+                        y=int(-i*sin+j*cos)
+                        #print(x,minx,maxx,y,miny,maxy)
+                        if x<=maxx and x>=minx and y >=maxy and y<=miny:#如果像素点在矩形内
                             data_A[i][j]+=1#若在圆内，则对该像素点进行累加
+                            continue
 
                 #print('data=',data)
                 cv2.putText(frame, text1, (10, 30), font, 0.5, (0, 255, 0), 1, cv2.LINE_AA, 0)
@@ -162,23 +173,23 @@ while(cap.isOpened()):
                 (cx,cy),(a,b),angle = cv2.fitEllipse(contours[c])#（x, y）代表椭圆中心点的位置
                                                                  #（a, b）代表长短轴长度，应注意a、b为长短轴的直径，而非半径
                                                                  # #angle 代表了中心旋转的角度
+
                 th = 2 * math.pi * angle / 360
                 cos = math.cos(th)
                 sin = math.sin(th)
-                if a>=b:#判断长轴在x上还是Y上，若a>=b 则在x轴上，反之在y轴上
-                    change=0
-                else:
-                    change=1
-                print(change)
+                cx=int(cx)
+                cy=int(cy)
+                a=int(a)
+                b=int(b)
+                #print(cx,cy,a,b,angle)
                 cv2.ellipse(frame,(np.int32(cx),np.int32(cy)),
                             (np.int32(a/2), np.int32(b/2)), angle, 0, 360, (0, 0, 255), 2, 8, 0)
                 for i in range(0,size[0]):
                     for j in range(0,size[1]):
-                        if change ==0 and math.pow((i*cos+j*sin-cx),2)/(a*a)+math.pow((-i*sin+j*cos-cy),2)/(b*b)<=0.25:#长轴为x轴，且像素点在方框内
-                            data_A[i][j]+=1#若在圆内，则对该像素点进行累加
-                        elif change ==1 and math.pow((i*cos+j*sin-cx),2)/(b*b)+math.pow((-i*sin+j*cos-cy),2)/(a*a)<=0.25:#长轴为y轴，且像素点在方框内
-                            data_A[i][j]+=1
+                        #print(int(i*cos)+int(j*sin),cx,int(-i*sin)+int(j*cos),cy,a,b)
 
+                        if math.pow((int(i-cx)*cos+int(j-cy)*sin),2)/(a*a)+math.pow((int(j-cy)*cos-int(i-cx)*sin),2)/(b*b)<=0.25:#长轴为x轴，且像素点在方框内
+                            data_A[i][j]+=1#若在椭圆内，则对该像素点进行累加
                 frame = cv2.drawContours(frame, contours, -1, (0, 0, 255), 1)#在原图中画轮廓
             #第一个参数是指明在哪幅图像上绘制轮廓；
             #第二个参数是轮廓本身，在Python中是一个list。
