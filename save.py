@@ -2,27 +2,20 @@ import numpy as np
 import cv2
 import math
 
-font = cv2.FONT_HERSHEY_SIMPLEX  # 设置字体样式
-cap = cv2.VideoCapture('c01.avi')
-# Define the codec and create VideoWriter object
-size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-        int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-out = cv2.VideoWriter('output_92.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, size,1)
-nihe =4
+
+input='1s'
+nihe =1
 #1 圆拟合
 #2 直边界矩形
 #3 最小矩形
-#4 椭圆
-
-'''# 计算(x1,y1)(x,y)、(x2,y2)(x,y)向量的叉乘
-def GetCross(x1,y1,x2,y2,x,y):
-    a=(x2-x1,y2-y1)
-    b=(x-x1,y-y1)
-    return a[0]*b[1]-a[1]*b[0]
-
-# 判断(x,y)是否在矩形内部
-def isInSide(x1,y1,x2,y2,x3,y3,x4,y4,x,y):
-    return GetCross(x1,y1,x2,y2,x,y)*GetCross(x3,y3,x4,y4,x,y)>=0 and GetCross(x2,y2,x3,y3,x,y)*GetCross(x4,y4,x1,y1,x,y)>=0'''
+#4 最小椭圆
+font = cv2.FONT_HERSHEY_SIMPLEX  # 设置字体样式
+cap = cv2.VideoCapture('%s.mp4'%input)
+# Define the codec and create VideoWriter object
+size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+out = cv2.VideoWriter('output%s.mp4'%input, cv2.VideoWriter_fourcc(*'XVID'), 20.0, size,1)
+threshold=size[0]*size[1]/1500
 f=0
 count=1
 size_w=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -33,12 +26,14 @@ while(cap.isOpened()):
     if nihe ==1: #圆拟合
         if ret==True:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#灰度化
-            ret, thresh = cv2.threshold(gray, 230, 255, 0)  # 二值化
+            ret, thresh = cv2.threshold(gray, 240, 255, 0)  # 二值化
             kernel = np.ones((5, 5), np.uint8)
             opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)#开运算
             closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)#闭运算
             contours, hierarchy = cv2.findContours(closing, 3, 1)#轮廓检测
             for c in range(len(contours)):
+                if cv2.contourArea(contours[c])< threshold:
+                    continue
                 (x, y), radius = cv2.minEnclosingCircle(contours[c])
                 center = (int(x), int(y))
                 radius = int(radius)
@@ -75,6 +70,8 @@ while(cap.isOpened()):
             closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)#闭运算
             contours, hierarchy = cv2.findContours(closing, 3, 1)#轮廓检测
             for c in range(len(contours)):
+                if cv2.contourArea(contours[c])< threshold:
+                    continue
                 x, y, w, h = cv2.boundingRect(contours[c])
                 area = cv2.contourArea(contours[c])
                 aspect_ratio = float(w) / h  # 长宽比
@@ -113,6 +110,8 @@ while(cap.isOpened()):
             closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)#闭运算
             contours, hierarchy = cv2.findContours(closing, 3, 1)#轮廓检测
             for c in range(len(contours)):
+                if cv2.contourArea(contours[c])< threshold:
+                    continue
                 rect = cv2.minAreaRect(contours[c])
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)  # 获得矩形角点
@@ -163,13 +162,15 @@ while(cap.isOpened()):
         if ret==True:
             #frame = cv2.flip(frame,0)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)#灰度化
-            ret, thresh = cv2.threshold(gray, 230, 255, 0)  # 二值化
+            ret, thresh = cv2.threshold(gray, 240, 255, 0)  # 二值化
             kernel = np.ones((5, 5), np.uint8)
             opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)#开运算
             closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)#闭运算
             contours, hierarchy = cv2.findContours(closing, 3, 1)#轮廓检测
 
             for c in range(len(contours)):
+                if cv2.contourArea(contours[c])< threshold:
+                    continue
                 (cx,cy),(a,b),angle = cv2.fitEllipse(contours[c])#（x, y）代表椭圆中心点的位置
                                                                  #（a, b）代表长短轴长度，应注意a、b为长短轴的直径，而非半径
                                                                  # #angle 代表了中心旋转的角度
@@ -190,7 +191,7 @@ while(cap.isOpened()):
 
                         if math.pow((int(i-cx)*cos+int(j-cy)*sin),2)/(a*a)+math.pow((int(j-cy)*cos-int(i-cx)*sin),2)/(b*b)<=0.25:#长轴为x轴，且像素点在方框内
                             data_A[i][j]+=1#若在椭圆内，则对该像素点进行累加
-                frame = cv2.drawContours(frame, contours, -1, (0, 0, 255), 1)#在原图中画轮廓
+                #frame = cv2.drawContours(frame, contours, -1, (0, 0, 255), 1)#在原图中画轮廓
             #第一个参数是指明在哪幅图像上绘制轮廓；
             #第二个参数是轮廓本身，在Python中是一个list。
             #第三个参数指定绘制轮廓list中的哪条轮廓，如果是-1，则绘制其中的所有轮廓。
@@ -203,8 +204,16 @@ while(cap.isOpened()):
             break
     else:
         break
+
 cv2.imshow('grayimage', data_A)
-cv2.imwrite('4.jpg', data_A)
+cv2.imwrite('%s.jpg'%input, data_A)
+M=np.max(data_A)#均一化
+print(M)
+data_B=data_A/M
+data_C=data_B*255
+b = data_C.astype(np.uint8)
+color=cv2.applyColorMap(b, cv2.COLORMAP_JET)
+cv2.imwrite('%s-%d.jpg'%(input,nihe), color)
 cap.release()
 out.release()
 cv2.destroyAllWindows()
